@@ -13,6 +13,7 @@ int EP =9;
 
 //relay pin input
 int RELAY_PIN = 10 ;
+int RELAY_POWER_PIN = 11 ;
 
 int shakeCount = 0 ;
 unsigned long lastShakeTime ;
@@ -21,7 +22,9 @@ bool turn_flag = false ;
 
 void setup(){
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(RELAY_PIN,HIGH); //keep it stop for the beginning
+  pinMode(RELAY_POWER_PIN, OUTPUT);
+  digitalWrite(RELAY_POWER_PIN,HIGH);
+  digitalWrite(RELAY_PIN,LOW); //keep it stop for the beginning
   
   pinMode(EP, INPUT); //set EP input for measurment
   Serial.begin(9600); //init serial 9600
@@ -75,13 +78,13 @@ void trigger_relay(){
 }
 
 void turn_on_relay(){
-  digitalWrite(RELAY_PIN, LOW) ;
+  digitalWrite(RELAY_PIN, HIGH) ;
   Serial.println("Fan RUN");  
   delay(1000) ;
 }
 
 void turn_off_relay(){
-  digitalWrite(RELAY_PIN, HIGH) ;
+  digitalWrite(RELAY_PIN, LOW) ;
   Serial.println("Fan STOP");  
   delay(1000);
 }

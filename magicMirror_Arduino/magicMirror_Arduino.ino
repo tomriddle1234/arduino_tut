@@ -2,60 +2,101 @@
 int photocellPin = 0;     // the cell and 10K pulldown are connected to a0
 int _photocellReading;     // the analog reading from the analog resistor divider
 
-int inputPin = 9;               // choose the input pin (for PIR sensor)
+int pirPin = 9;               // choose the input pin (for PIR sensor)
 int pirState = LOW; 
 int _val = 0;  
 
+/////////////////////////////
+//VARS
+//the time we give the sensor to calibrate (10-60 secs according to the datasheet)
+int calibrationTime = 10;        
+
+//the time when the sensor outputs a low impulse
+long unsigned int lowIn;         
+
+//the amount of milliseconds the sensor has to be low 
+//before we assume all motion has stopped
+long unsigned int pause = 5000;  
+
+boolean lockLow = true;
+boolean takeLowTime;  
+
+
 void setup(void) {
-  pinMode(inputPin, INPUT);
+  pinMode(pirPin, INPUT);
   // We'll send debugging information via the Serial monitor
   Serial.begin(9600);   
+
+  //give the sensor some time to calibrate
+  Serial.print("calibrating sensor ");
+  for(int i = 0; i < calibrationTime; i++){
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println(" done");
+  Serial.println("SENSOR ACTIVE");
+  delay(50);
+  
   
 }
  
 void loop(void) {
+  
+  checkPIRStateSimple();
   _photocellReading = analogRead(photocellPin);  
-  _val = digitalRead(inputPin); 
+   
+  checkLightSensorSimple(_photocellReading);
   
-  checkPIRState(_val);
-  checkLightSensor(_photocellReading);
-  
-  delay(1000);
+  delay(500);
 }
 
-void checkLightSensor(int photocellReading){
-  Serial.print("Analog reading = ");
-  Serial.print(photocellReading);     // the raw analog reading
- 
-  // We'll have a few threshholds, qualitatively determined
-  if (photocellReading < 10) {
-    Serial.println(" - Dark");
-  } else if (photocellReading < 200) {
-    Serial.println(" - Dim");
-  } else if (photocellReading < 500) {
-    Serial.println(" - Light");
-  } else if (photocellReading < 800) {
-    Serial.println(" - Bright");
-  } else {
-    Serial.println(" - Very bright");
+void checkLightSensorSimple (int photocellReading){
+//  Serial.println(photocellReading);
+//  delay(10);
+  if (photocellReading >= 900){
+    Serial.println("Light Trigger");
+    delay(10);
   }
 }
 
-void checkPIRState(int val){
-   if (val == HIGH) {            // check if the input is HIGH
-    if (pirState == LOW) {
-      // we have just turned on
-      Serial.println("Motion detected!");
-      // We only want to print on the output change, not state
-      pirState = HIGH;
-    }
-  } else {
-    if (pirState == HIGH){
-      // we have just turned of
-      Serial.println("Motion ended!");
-      // We only want to print on the output change, not state
-      pirState = LOW;
-    }
-  }
+void checkPIRStateSimple(){
+      if(digitalRead(pirPin) == HIGH){
+//       Serial.println("High");
+//       delay(10);
+       if(lockLow){  
+         //makes sure we wait for a transition to LOW before any further output is made:
+         lockLow = false;            
+//         Serial.println("---");
+//         Serial.print("motion detected at ");
+//         Serial.print(millis()/1000);
+//         Serial.println(" sec"); 
+         Serial.println("Body In");
+         delay(50);
+         }         
+         takeLowTime = true;
+       }
+
+     if(digitalRead(pirPin) == LOW){    
+//      Serial.println("Low");
+//      delay(10);   
+       if(takeLowTime){
+          lowIn = millis();          //save the time of the transition from high to LOW
+          takeLowTime = false;       //make sure this is only done at the start of a LOW phase
+       }
+       //if the sensor is low for more than the given pause, 
+       //we assume that no more motion is going to happen
+       if(!lockLow && millis() - lowIn > pause){  
+           //makes sure this block of code is only executed again after 
+           //a new motion sequence has been detected
+           lockLow = true;                        
+//           Serial.print("motion ended at ");      //output
+//           Serial.print((millis() - pause)/1000);
+//           Serial.println(" sec");
+           Serial.println("Body Out");
+           delay(50);
+           }
+       }
 }
+
+
 
